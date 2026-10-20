@@ -1,0 +1,11 @@
+Olá!
+
+Segue abaixo seus dados de acesso ao sistema Xcash:
+
+Usuário: {usuario}
+
+Senha padrão: Dpsp + {caractere} + a matrícula (sem o zero inicial)
+
+Exemplo: Dpsp{caractere}111111
+
+Caso tenha qualquer dúvida ou encontre alguma dificuldade no acesso, permaneço à disposição para ajudar.

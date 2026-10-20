@@ -1,0 +1,64 @@
+# Pipeline do reset de senha XCash.
+#
+# IMPORTANTE sobre rede: o CASI (192.168.57.78) e o GLPI (suporte.dpsp.io) são internos.
+# Os runners compartilhados do gitlab.com NÃO alcançam a rede interna. É preciso um
+# GitLab Runner self-hosted dentro da rede do DPSP, com a tag "dpsp-interno" (ajuste abaixo).
+#
+# Agendar a cada 2h: no GitLab, em Build > Pipeline schedules, crie um agendamento com o
+# cron "0 */2 * * *". A pipeline agendada roda o job abaixo.
+#
+# Variáveis (Settings > CI/CD > Variables), marque como "Masked"/"Protected":
+#   CASI_USUARIO, CASI_SENHA
+# A sessão do GLPI (glpi_session.json) expira e exige SSO, então por padrão a resposta no GLPI
+# fica DESLIGADA no CI (RESPONDER_GLPI=false). Para responder de forma desatendida, o caminho
+# robusto é a API do GLPI (podemos adicionar depois); a sessão por cookie não dura.
+
+stages:
+  - reset-xcash
+
+reset-senha-xcash:
+  stage: reset-xcash
+  image: python:3.12-slim
+  tags:
+    - dpsp-interno        # runner self-hosted com acesso à rede interna
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+    - if: '$CI_PIPELINE_SOURCE == "web"'   # permite rodar manualmente pelo botão "Run pipeline"
+  variables:
+    NAVEGADOR: "chromium"   # no CI não há Edge; usa o Chromium do Playwright
+    HEADLESS: "true"
+    RESPONDER_GLPI: "false"
+    CSV_GLPI: "glpi.csv"
+    PAUSA_ENTRE_CHAMADOS: "5"
+  before_script:
+    - pip install --no-cache-dir -r requirements.txt
+    - python -m playwright install --with-deps chromium
+    # Monta o .env a partir das variáveis protegidas do GitLab
+    - |
+      cat > .env <<EOF
+      CASI_URL=http://192.168.57.78:8080/casi
+      CASI_USUARIO=${CASI_USUARIO}
+      CASI_SENHA=${CASI_SENHA}
+      CSV_GLPI=${CSV_GLPI}
+      PLANILHA=chamados.xlsx
+      EXIGIR_CATEGORIA=true
+      CATEGORIA_ID=2314030
+      CRIACAO_SE_JA_EXISTE=resetar
+      RESPONDER_GLPI=${RESPONDER_GLPI}
+      NAVEGADOR=${NAVEGADOR}
+      HEADLESS=${HEADLESS}
+      PAUSA_ENTRE_CHAMADOS=${PAUSA_ENTRE_CHAMADOS}
+      CARACTERES_SENHA='@!#\$&*'
+      EOF
+  script:
+    # O glpi.csv precisa chegar até aqui (commit no repo, ou um job anterior que o exporte).
+    - python main.py
+  artifacts:
+    when: always
+    expire_in: 30 days
+    paths:
+      - chamados.xlsx
+      - revisao_humana.xlsx
+      - logs/
+      - evidencias/
+      - mensagens/

@@ -1,0 +1,11 @@
+.env
+logs/
+evidencias/
+mensagens/
+__pycache__/
+# perfil do navegador do GLPI (contém o login) e sessão antiga
+perfil_glpi/
+glpi_session.json
+# planilhas e exportações do GLPI têm dados pessoais dos colaboradores
+*.xlsx
+*.csv
